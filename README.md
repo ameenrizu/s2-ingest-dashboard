@@ -1,6 +1,6 @@
 # 🎬 S2 Ingest Dashboard
 
-A lightweight dashboard prototype for monitoring VFX ingest pipeline status.
+VFX ingest pipeline dashboard with mock data support and API-ready integration.
 
 ## 🚀 Overview
 This tool provides a visual interface to track the status of shots across different pipeline stages.  
