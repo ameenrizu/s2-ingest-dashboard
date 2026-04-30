@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>S2 Ingest Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-base:#0d0f12;
+      --bg-surface:#151820;
+      --bg-elevated:#1c2030;
+      --bg-input:#12151c;
+      --border:rgba(255,255,255,0.07);
+      --border-hover:rgba(255,255,255,0.14);
+      --text-primary:#e8eaf0;
+      --text-secondary:#7a8194;
+      --text-muted:#484f63;
+      --green:#4caf82;
+      --green-dim:rgba(76,175,130,0.12);
+      --green-glow:rgba(76,175,130,0.25);
+      --yellow:#e8a538;
+      --yellow-dim:rgba(232,165,56,0.12);
+      --yellow-glow:rgba(232,165,56,0.25);
+      --red:#e05252;
+      --red-dim:rgba(224,82,82,0.12);
+      --red-glow:rgba(224,82,82,0.25);
+      --blue:#5b8def;
+      --blue-dim:rgba(91,141,239,0.12);
+      --font-ui:'Inter', sans-serif;
+      --font-mono:'JetBrains Mono', monospace;
+      --gap-xs:4px;
+      --gap-sm:8px;
+      --gap-md:14px;
+      --gap-lg:20px;
+      --gap-xl:28px;
+      --radius-sm:6px;
+      --radius-md:10px;
+      --radius-lg:14px;
+      --ease:0.18s ease;
+    }
+
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html, body { height:100%; }
+    body {
+      font-family:var(--font-ui);
+      background:var(--bg-base);
+      color:var(--text-primary);
+      font-size:14px;
+      line-height:1.5;
+      min-height:100vh;
+      background-image:linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size:40px 40px;
+    }
+
+    .app { max-width:1400px; margin:0 auto; padding:var(--gap-xl) var(--gap-lg); }
+
+    .header {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:var(--gap-md);
+      margin-bottom:var(--gap-lg);
+      padding-bottom:var(--gap-lg);
+      border-bottom:1px solid var(--border);
+    }
+    .header-left { display:flex; align-items:center; gap:var(--gap-md); }
+    .logo-mark {
+      width:42px; height:42px;
+      background:linear-gradient(135deg, #e8a538 0%, #e05252 100%);
+      border-radius:var(--radius-md);
+      display:flex; align-items:center; justify-content:center;
+      font-family:var(--font-mono); font-weight:600; font-size:15px; color:#fff;
+      flex-shrink:0;
+      box-shadow:0 0 20px rgba(232,165,56,0.3);
+    }
+    .header-title { font-size:20px; font-weight:600; letter-spacing:-0.3px; }
+    .header-subtitle { font-size:12px; color:var(--text-secondary); margin-top:2px; font-family:var(--font-mono); }
+    .header-right { display:flex; align-items:center; gap:var(--gap-sm); flex-wrap:wrap; }
+    .live-badge { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); font-family:var(--font-mono); }
+    .live-dot { width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 6px var(--green); animation:pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
+    #countdown { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); min-width:100px; text-align:right; }
+
+    .btn-refresh {
+      display:flex; align-items:center; gap:6px;
+      padding:7px 14px;
+      background:var(--bg-elevated);
+      border:1px solid var(--border-hover);
+      border-radius:var(--radius-sm);
+      color:var(--text-secondary);
+      font-size:12px;
+      font-family:var(--font-mono);
+      cursor:pointer;
+      transition:all var(--ease);
+    }
+    .btn-toggle {
+      display:flex; align-items:center; gap:6px;
+      padding:7px 10px;
+      background:var(--bg-elevated);
+      border:1px solid var(--border-hover);
+      border-radius:var(--radius-sm);
+      color:var(--text-secondary);
+      font-size:12px;
+      font-family:var(--font-mono);
+      cursor:pointer;
+      transition:all var(--ease);
+    }
+    .btn-toggle:hover { color:var(--text-primary); border-color:var(--blue); background:var(--blue-dim); }
+    .btn-toggle.on {
+      border-color:var(--green);
+      color:var(--green);
+      background:var(--green-dim);
+    }
+    .btn-refresh:hover { color:var(--text-primary); border-color:var(--blue); background:var(--blue-dim); }
+    .spin { animation:spinning .7s linear infinite; display:inline-block; }
+    @keyframes spinning { to { transform:rotate(360deg); } }
+
+    .mock-banner {
+      margin-bottom:var(--gap-xl);
+      padding:10px 14px;
+      border:1px solid var(--yellow);
+      border-radius:var(--radius-sm);
+      background:var(--yellow-dim);
+      color:var(--yellow);
+      font-size:12px;
+      font-family:var(--font-mono);
+    }
+
+    .summary {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+      gap:var(--gap-md);
+      margin-bottom:var(--gap-xl);
+    }
+    .sum-card {
+      background:var(--bg-surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius-lg);
+      padding:var(--gap-md) var(--gap-lg);
+      position:relative;
+      overflow:hidden;
+      transition:border-color var(--ease);
+    }
+    .sum-card:hover { border-color:var(--border-hover); }
+    .sum-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .sum-card.c-all::before{background:var(--blue)}
+    .sum-card.c-done::before{background:var(--green)}
+    .sum-card.c-prog::before{background:var(--yellow)}
+    .sum-card.c-issue::before{background:var(--red)}
+    .sum-label { font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.08em; margin-bottom:var(--gap-xs); }
+    .sum-value { font-size:30px; font-weight:600; font-family:var(--font-mono); line-height:1; }
+    .sum-card.c-all .sum-value{color:var(--blue)}
+    .sum-card.c-done .sum-value{color:var(--green)}
+    .sum-card.c-prog .sum-value{color:var(--yellow)}
+    .sum-card.c-issue .sum-value{color:var(--red)}
+    .sum-sub { font-size:11px; color:var(--text-muted); margin-top:4px; }
+
+    .controls { display:flex; gap:var(--gap-sm); margin-bottom:var(--gap-lg); flex-wrap:wrap; }
+    .search-wrap { position:relative; flex:1; min-width:200px; }
+    .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:14px; pointer-events:none; }
+    input[type="text"], select {
+      background:var(--bg-input);
+      border:1px solid var(--border);
+      border-radius:var(--radius-sm);
+      color:var(--text-primary);
+      font-family:var(--font-ui);
+      font-size:13px;
+      height:36px;
+      outline:none;
+      transition:border-color var(--ease), box-shadow var(--ease);
+    }
+    input[type="text"] { width:100%; padding:0 12px 0 36px; }
+    input[type="text"]:focus, select:focus { border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-dim); }
+    select {
+      padding:0 32px 0 12px;
+      cursor:pointer;
+      appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8194' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;
+      background-position:right 10px center;
+    }
+
+    .filter-tabs { display:flex; gap:4px; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:3px; }
+    .tab { padding:4px 12px; font-size:12px; border-radius:4px; cursor:pointer; color:var(--text-secondary); transition:all var(--ease); white-space:nowrap; user-select:none; }
+    .tab:hover { color:var(--text-primary); background:var(--bg-elevated); }
+    .tab.active { background:var(--bg-elevated); color:var(--text-primary); }
+    .tab.active[data-f="all"]{color:var(--blue)}
+    .tab.active[data-f="done"]{color:var(--green)}
+    .tab.active[data-f="progress"]{color:var(--yellow)}
+    .tab.active[data-f="issue"]{color:var(--red)}
+
+    .sort-wrap { display:flex; align-items:center; gap:6px; }
+    .sort-label { font-size:12px; color:var(--text-muted); white-space:nowrap; }
+
+    .shot-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:var(--gap-md); }
+    .shot-card {
+      background:var(--bg-surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius-lg);
+      padding:var(--gap-md) var(--gap-lg);
+      position:relative;
+      overflow:hidden;
+      transition:border-color var(--ease), transform var(--ease), box-shadow var(--ease);
+      animation:fadeIn .3s ease both;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .shot-card:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(0,0,0,.3); }
+    .shot-card::after { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:3px 0 0 3px; }
+    .shot-card.s-done { border-color:rgba(76,175,130,.2); }
+    .shot-card.s-done::after { background:var(--green); }
+    .shot-card.s-done:hover { border-color:var(--green); box-shadow:0 8px 32px var(--green-glow); }
+    .shot-card.s-progress { border-color:rgba(232,165,56,.2); }
+    .shot-card.s-progress::after { background:var(--yellow); }
+    .shot-card.s-progress:hover { border-color:var(--yellow); box-shadow:0 8px 32px var(--yellow-glow); }
+    .shot-card.s-issue { border-color:rgba(224,82,82,.2); }
+    .shot-card.s-issue::after { background:var(--red); }
+    .shot-card.s-issue:hover { border-color:var(--red); box-shadow:0 8px 32px var(--red-glow); }
+
+    .card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--gap-sm); margin-bottom:var(--gap-md); padding-left:8px; }
+    .shot-name { font-family:var(--font-mono); font-size:13px; font-weight:600; letter-spacing:.02em; }
+    .shot-seq { font-family:var(--font-mono); font-size:10px; color:var(--text-muted); margin-top:2px; }
+    .overall-badge { font-size:10px; font-weight:600; padding:3px 8px; border-radius:20px; white-space:nowrap; text-transform:uppercase; letter-spacing:.06em; }
+    .badge-done { background:var(--green-dim); color:var(--green); }
+    .badge-progress { background:var(--yellow-dim); color:var(--yellow); }
+    .badge-issue { background:var(--red-dim); color:var(--red); }
+
+    .card-divider { border:none; border-top:1px solid var(--border); margin:0 0 var(--gap-md); }
+    .status-rows { display:flex; flex-direction:column; gap:9px; padding-left:8px; }
+    .status-row { display:flex; align-items:center; justify-content:space-between; gap:var(--gap-sm); }
+    .row-label { font-size:12px; color:var(--text-secondary); flex:1; }
+    .row-value { display:flex; align-items:center; gap:6px; font-size:12px; font-family:var(--font-mono); }
+    .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .dot-green { background:var(--green); box-shadow:0 0 5px var(--green); }
+    .dot-yellow { background:var(--yellow); box-shadow:0 0 5px var(--yellow); }
+    .dot-red { background:var(--red); box-shadow:0 0 5px var(--red); }
+    .val-green { color:var(--green); }
+    .val-yellow { color:var(--yellow); }
+    .val-red { color:var(--red); }
+    .val-muted { color:var(--text-muted); }
+
+    .card-footer { margin-top:var(--gap-md); padding-top:var(--gap-sm); border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding-left:8px; }
+    .updated-time { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
+    .progress-bar-wrap { width:60px; height:3px; background:var(--bg-elevated); border-radius:2px; overflow:hidden; }
+    .progress-bar-fill { height:100%; border-radius:2px; transition:width .4s ease; }
+
+    .empty-state { grid-column:1 / -1; text-align:center; padding:60px 20px; color:var(--text-muted); }
+    .empty-state .empty-icon { font-size:36px; margin-bottom:12px; opacity:0.5; }
+    .empty-state p { font-size:14px; }
+
+    .footer { margin-top:var(--gap-xl); padding-top:var(--gap-md); border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--gap-sm); }
+    .footer-left { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
+    .api-note { font-size:11px; color:var(--text-muted); background:var(--bg-elevated); border:1px dashed var(--border-hover); border-radius:var(--radius-sm); padding:5px 10px; font-family:var(--font-mono); }
+    .api-note span { color:var(--yellow); }
+    .share-note { width:100%; font-size:11px; color:var(--text-secondary); font-family:var(--font-mono); }
+
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background:var(--bg-elevated); border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background:var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-mark">S2</div>
+        <div>
+          <div class="header-title">Ingest Dashboard</div>
+          <div class="header-subtitle">VFX Pipeline Monitor · Mock Data Mode</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+        <span id="countdown">Refresh in 30s</span>
+        <button class="btn-toggle" id="dummy-toggle" onclick="toggleDummyMode()">Dummy: ON</button>
+        <button class="btn-refresh" onclick="triggerRefresh()"><span id="spin-icon">↻</span> Refresh</button>
+      </div>
+    </header>
+
+    <section class="mock-banner">Mock Data Mode - API integration pending</section>
+
+    <section class="summary">
+      <div class="sum-card c-all"><div class="sum-label">Total Shots</div><div class="sum-value" id="sum-total">—</div><div class="sum-sub">across all sequences</div></div>
+      <div class="sum-card c-done"><div class="sum-label">Completed</div><div class="sum-value" id="sum-done">—</div><div class="sum-sub">all stages green</div></div>
+      <div class="sum-card c-prog"><div class="sum-label">In Progress</div><div class="sum-value" id="sum-prog">—</div><div class="sum-sub">at least one stage running</div></div>
+      <div class="sum-card c-issue"><div class="sum-label">Issues</div><div class="sum-value" id="sum-issue">—</div><div class="sum-sub">needs attention</div></div>
+    </section>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search" placeholder="Search shot name… e.g. SHOT_004" oninput="render()" />
+      </div>
+      <div class="filter-tabs" id="filter-tabs">
+        <div class="tab active" data-f="all" onclick="setFilter('all')">All</div>
+        <div class="tab" data-f="done" onclick="setFilter('done')">Completed</div>
+        <div class="tab" data-f="progress" onclick="setFilter('progress')">In Progress</div>
+        <div class="tab" data-f="issue" onclick="setFilter('issue')">Issues</div>
+      </div>
+      <div class="sort-wrap">
+        <span class="sort-label">Sort:</span>
+        <select id="sort" onchange="render()">
+          <option value="name">Name A→Z</option>
+          <option value="status">Status</option>
+          <option value="updated">Last Updated</option>
+        </select>
+      </div>
+    </div>
+
+    <main class="shot-grid" id="grid"></main>
+
+    <footer class="footer">
+      <div class="footer-left">Last full refresh: <span id="last-refresh">—</span></div>
+      <div class="share-note">Local preview: http://localhost:8000/mailprep/practice/s2dashboard.html</div>
+    </footer>
+  </div>
+
+<script>
+const CONFIG = {
+  autoRefreshSeconds: 30,
+  totalShots: 24,
+  sequences: ['SQ010', 'SQ020', 'SQ030', 'SQ040'],
+  ingestStates: ['Completed', 'In Progress', 'Pending'],
+  proxyStates: ['Done', 'In Progress', 'Not Started'],
+  symlinkStates: ['Available', 'Not Available'],
+  permissionStates: ['Granted', 'Missing'],
+  storageStates: ['Available', 'Offline', 'Missing'],
+  remarkOptions: [
+    'OK',
+    'Permission denied on ingest folder',
+    'Storage mount unavailable',
+    'Path not found',
+    'Retry queued by scheduler'
+  ]
+};
+
+let useDummyShots = true;
+const DUMMY_SHOTS = [
+  {
+    name: 'SQ010_SHOT_001',
+    seq: 'SQ010',
+    ingest: 'Completed',
+    proxy: 'Done',
+    symlink: 'Available',
+    permission: 'Granted',
+    storage: 'Available',
+    remarks: 'OK',
+    updated: '2026-04-30T10:20:00Z',
+    updatedAt: Date.parse('2026-04-30T10:20:00Z')
+  },
+  {
+    name: 'SQ020_SHOT_014',
+    seq: 'SQ020',
+    ingest: 'In Progress',
+    proxy: 'In Progress',
+    symlink: 'Not Available',
+    permission: 'Missing',
+    storage: 'Offline',
+    remarks: 'Storage mount unavailable',
+    updated: '2026-04-30T09:55:00Z',
+    updatedAt: Date.parse('2026-04-30T09:55:00Z')
+  },
+  {
+    name: 'SQ030_SHOT_021',
+    seq: 'SQ030',
+    ingest: 'Pending',
+    proxy: 'Not Started',
+    symlink: 'Not Available',
+    permission: 'Missing',
+    storage: 'Missing',
+    remarks: 'Permission denied on ingest folder',
+    updated: '2026-04-30T08:40:00Z',
+    updatedAt: Date.parse('2026-04-30T08:40:00Z')
+  }
+];
+
+function randomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function randomMinutesAgo(max = 180) {
+  const mins = Math.floor(Math.random() * max);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
+}
+
+function updatedSortValue(shot) {
+  if (typeof shot.updatedAt === 'number' && Number.isFinite(shot.updatedAt)) {
+    return shot.updatedAt;
+  }
+
+  const raw = String(shot.updated || '').trim();
+  const isoMs = Date.parse(raw);
+  if (!Number.isNaN(isoMs)) return isoMs;
+
+  if (raw === 'just now') return Date.now();
+
+  const minsMatch = raw.match(/^(\d+)m ago$/i);
+  if (minsMatch) return Date.now() - (Number(minsMatch[1]) * 60 * 1000);
+
+  const hrsMinsMatch = raw.match(/^(\d+)h(?:\s+(\d+)m)? ago$/i);
+  if (hrsMinsMatch) {
+    const h = Number(hrsMinsMatch[1]);
+    const m = Number(hrsMinsMatch[2] || 0);
+    return Date.now() - ((h * 60 + m) * 60 * 1000);
+  }
+
+  return 0;
+}
+
+function generateShots() {
+  const shots = [];
+  for (let i = 1; i <= CONFIG.totalShots; i++) {
+    const seqIndex = Math.floor((i - 1) / (CONFIG.totalShots / CONFIG.sequences.length));
+    const seq = CONFIG.sequences[Math.min(seqIndex, CONFIG.sequences.length - 1)];
+    const num = String(i).padStart(3, '0');
+    shots.push({
+      name: `${seq}_SHOT_${num}`,
+      seq,
+      ingest: randomItem(CONFIG.ingestStates),
+      proxy: randomItem(CONFIG.proxyStates),
+      symlink: randomItem(CONFIG.symlinkStates),
+      permission: randomItem(CONFIG.permissionStates),
+      storage: randomItem(CONFIG.storageStates),
+      remarks: randomItem(CONFIG.remarkOptions),
+      updated: randomMinutesAgo(),
+      updatedAt: Date.now() - Math.floor(Math.random() * 180) * 60 * 1000
+    });
+  }
+  return shots;
+}
+
+/*
+  API-READY SECTION
+  Expected API response:
+  {
+    "shots": [{
+      "shot_name": "SQ010_SHOT_001",
+      "sequence": "SQ010",
+      "ingest_status": "Completed",
+      "proxy_status": "Done",
+      "symlink_status": "Available",
+      "permission_status": "Granted",
+      "storage_status": "Available",
+      "remarks": "OK",
+      "last_updated": "2026-04-30T10:20:00Z"
+    }]
+  }
+*/
+async function fetchShotsFromApi(apiUrl) {
+  const res = await fetch(apiUrl);
+  if (!res.ok) throw new Error(`API request failed: ${res.status}`);
+  const json = await res.json();
+  return (json.shots || []).map(s => ({
+    name: s.shot_name,
+    seq: s.sequence,
+    ingest: s.ingest_status,
+    proxy: s.proxy_status,
+    symlink: s.symlink_status,
+    permission: s.permission_status,
+    storage: s.storage_status,
+    remarks: s.remarks || 'OK',
+    updated: s.last_updated
+  }));
+}
+
+async function getData() {
+  if (useDummyShots) return DUMMY_SHOTS;
+  return generateShots();
+  // Future: return await fetchShotsFromApi('https://your-api.com/ingest/shots');
+}
+
+function renderDummyToggle() {
+  const el = document.getElementById('dummy-toggle');
+  if (!el) return;
+  el.textContent = `Dummy: ${useDummyShots ? 'ON' : 'OFF'}`;
+  el.classList.toggle('on', useDummyShots);
+}
+
+async function toggleDummyMode() {
+  useDummyShots = !useDummyShots;
+  renderDummyToggle();
+  await triggerRefresh();
+}
+
+function overallStatus(shot) {
+  const allGood =
+    shot.ingest === 'Completed' &&
+    shot.proxy === 'Done' &&
+    shot.symlink === 'Available' &&
+    shot.permission === 'Granted' &&
+    shot.storage === 'Available';
+  if (allGood) return 'done';
+
+  const someProgress =
+    shot.ingest === 'In Progress' ||
+    shot.ingest === 'Completed' ||
+    shot.proxy === 'In Progress' ||
+    shot.proxy === 'Done' ||
+    shot.storage === 'Offline';
+  if (someProgress) return 'progress';
+  return 'issue';
+}
+
+function progressPercent(shot) {
+  let pct = 0;
+  if (shot.ingest === 'In Progress') pct += 20;
+  if (shot.ingest === 'Completed') pct += 40;
+  if (shot.proxy === 'In Progress') pct += 20;
+  if (shot.proxy === 'Done') pct += 40;
+  if (shot.symlink === 'Available') pct += 20;
+  if (shot.permission === 'Granted') pct += 10;
+  if (shot.storage === 'Available') pct += 10;
+  return Math.min(pct, 100);
+}
+
+const ingestDot = { 'Completed':'dot-green', 'In Progress':'dot-yellow', 'Pending':'dot-red' };
+const ingestVal = { 'Completed':'val-green', 'In Progress':'val-yellow', 'Pending':'val-red' };
+const proxyDot = { 'Done':'dot-green', 'In Progress':'dot-yellow', 'Not Started':'dot-red' };
+const proxyVal = { 'Done':'val-green', 'In Progress':'val-yellow', 'Not Started':'val-red' };
+const symlinkDot = { 'Available':'dot-green', 'Not Available':'dot-red' };
+const symlinkVal = { 'Available':'val-green', 'Not Available':'val-red' };
+const permissionDot = { 'Granted':'dot-green', 'Missing':'dot-red' };
+const permissionVal = { 'Granted':'val-green', 'Missing':'val-red' };
+const storageDot = { 'Available':'dot-green', 'Offline':'dot-yellow', 'Missing':'dot-red' };
+const storageVal = { 'Available':'val-green', 'Offline':'val-yellow', 'Missing':'val-red' };
+
+let shots = [];
+let currentFilter = 'all';
+
+function render() {
+  const searchVal = document.getElementById('search').value.toLowerCase().trim();
+  const sortVal = document.getElementById('sort').value;
+
+  let filtered = shots.filter(shot => {
+    const os = overallStatus(shot);
+    const matchesFilter = currentFilter === 'all' || os === currentFilter;
+    const matchesSearch = shot.name.toLowerCase().includes(searchVal);
+    return matchesFilter && matchesSearch;
+  });
+
+  const statusOrder = { done: 0, progress: 1, issue: 2 };
+  filtered.sort((a, b) => {
+    if (sortVal === 'name') return a.name.localeCompare(b.name);
+    if (sortVal === 'status') return statusOrder[overallStatus(a)] - statusOrder[overallStatus(b)];
+    if (sortVal === 'updated') return updatedSortValue(b) - updatedSortValue(a);
+    return 0;
+  });
+
+  const total = shots.length;
+  const done = shots.filter(s => overallStatus(s) === 'done').length;
+  const prog = shots.filter(s => overallStatus(s) === 'progress').length;
+  const issue = shots.filter(s => overallStatus(s) === 'issue').length;
+  document.getElementById('sum-total').textContent = total;
+  document.getElementById('sum-done').textContent = done;
+  document.getElementById('sum-prog').textContent = prog;
+  document.getElementById('sum-issue').textContent = issue;
+
+  const grid = document.getElementById('grid');
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">◎</div><p>No shots match your search or filter.</p></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map((shot, i) => {
+    const os = overallStatus(shot);
+    const pct = progressPercent(shot);
+    const badgeMap = {
+      done: ['badge-done', 'Completed'],
+      progress: ['badge-progress', 'In Progress'],
+      issue: ['badge-issue', 'Issue']
+    };
+    const [badgeCls, badgeTxt] = badgeMap[os];
+    const barColor = os === 'done' ? 'var(--green)' : os === 'progress' ? 'var(--yellow)' : 'var(--red)';
+
+    return `
+      <div class="shot-card s-${os}" style="animation-delay:${i * 0.03}s">
+        <div class="card-header">
+          <div>
+            <div class="shot-name">${shot.name}</div>
+            <div class="shot-seq">${shot.seq}</div>
+          </div>
+          <span class="overall-badge ${badgeCls}">${badgeTxt}</span>
+        </div>
+
+        <hr class="card-divider" />
+
+        <div class="status-rows">
+          <div class="status-row"><span class="row-label">Ingest</span><span class="row-value"><span class="dot ${ingestDot[shot.ingest] || 'dot-red'}"></span><span class="${ingestVal[shot.ingest] || 'val-red'}">${shot.ingest}</span></span></div>
+          <div class="status-row"><span class="row-label">Proxy / QT</span><span class="row-value"><span class="dot ${proxyDot[shot.proxy] || 'dot-red'}"></span><span class="${proxyVal[shot.proxy] || 'val-red'}">${shot.proxy}</span></span></div>
+          <div class="status-row"><span class="row-label">Symlink</span><span class="row-value"><span class="dot ${symlinkDot[shot.symlink] || 'dot-red'}"></span><span class="${symlinkVal[shot.symlink] || 'val-red'}">${shot.symlink}</span></span></div>
+          <div class="status-row"><span class="row-label">Permission Check</span><span class="row-value"><span class="dot ${permissionDot[shot.permission] || 'dot-red'}"></span><span class="${permissionVal[shot.permission] || 'val-red'}">${shot.permission || 'Missing'}</span></span></div>
+          <div class="status-row"><span class="row-label">Storage / Path</span><span class="row-value"><span class="dot ${storageDot[shot.storage] || 'dot-red'}"></span><span class="${storageVal[shot.storage] || 'val-red'}">${shot.storage || 'Missing'}</span></span></div>
+          <div class="status-row"><span class="row-label">Remarks</span><span class="row-value ${shot.remarks && shot.remarks !== 'OK' ? 'val-yellow' : 'val-muted'}">${shot.remarks || 'OK'}</span></div>
+        </div>
+
+        <div class="card-footer">
+          <span class="updated-time">↻ ${shot.updated}</span>
+          <div class="progress-bar-wrap" title="${pct}% complete"><div class="progress-bar-fill" style="width:${pct}%; background:${barColor};"></div></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function setFilter(value) {
+  currentFilter = value;
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.f === value));
+  render();
+}
+
+let countdownValue = CONFIG.autoRefreshSeconds;
+let countdownTimer = null;
+function startCountdown() {
+  clearInterval(countdownTimer);
+  countdownValue = CONFIG.autoRefreshSeconds;
+  countdownTimer = setInterval(() => {
+    countdownValue--;
+    document.getElementById('countdown').textContent = `Refresh in ${countdownValue}s`;
+    if (countdownValue <= 0) triggerRefresh();
+  }, 1000);
+}
+
+async function triggerRefresh() {
+  const icon = document.getElementById('spin-icon');
+  icon.classList.add('spin');
+  try {
+    shots = await getData();
+    render();
+    document.getElementById('last-refresh').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch (err) {
+    console.error('[S2 Dashboard] Data fetch failed:', err);
+  } finally {
+    icon.classList.remove('spin');
+  }
+  startCountdown();
+}
+
+(async function init() {
+  renderDummyToggle();
+  await triggerRefresh();
+})();
+</script>
+</body>
+</html>
